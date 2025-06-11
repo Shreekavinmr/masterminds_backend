@@ -4,20 +4,30 @@ const authController = require('../controllers/authController');
 const resourceController = require('../controllers/resourceController');
 const { protect, admin } = require('../middleware/auth');
 
+const isStudent = (req, res, next) => {
+  if (req.user && req.user.role === 'student') {
+    return next();
+  }
+  res.status(403).json({ message: 'Access denied: Student role required' });
+};
+
 // Public route for fetching syllabi (for course listings)
 router.get('/syllabi', resourceController.getAllSyllabi);
 
-// Syllabus Routes
+// Syllabus Routes (Admin only)
 router.post('/syllabus', protect, admin, resourceController.addSyllabus);
 router.get('/syllabus', protect, admin, resourceController.getAllSyllabi);
 router.put('/syllabus/:syllabusId', protect, admin, resourceController.updateSyllabus);
 router.delete('/syllabus/:syllabusId', protect, admin, resourceController.deleteSyllabus);
 
-// Notes Routes
+// Notes Routes (Admin only)
 router.post('/notes', protect, admin, resourceController.addNotes);
 router.get('/notes', protect, admin, resourceController.getAllNotes);
 router.put('/notes/:notesId', protect, admin, resourceController.updateNotes);
 router.delete('/notes/:notesId', protect, admin, resourceController.deleteNotes);
+
+// Student Notes Route (Filtered by student's enrollment)
+router.get('/student/notes', protect, isStudent, resourceController.getStudentNotes);
 
 // Auth and Student Routes
 router.post('/login', authController.login);

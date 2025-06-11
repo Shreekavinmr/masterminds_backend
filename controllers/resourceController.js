@@ -1,5 +1,6 @@
 const Syllabus = require('../models/syllabus');
 const Notes = require('../models/notes');
+const Student = require('../models/studentModel');
 
 const resourceController = {
   // Add Syllabus
@@ -117,6 +118,56 @@ const resourceController = {
       res.json(notes);
     } catch (error) {
       console.error('Get all notes error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  getStudentNotes: async (req, res) => {
+    try {
+      // Find the student record for the current user
+      const student = await Student.findOne({ user: req.user.id });
+      
+      if (!student) {
+        return res.status(404).json({ message: 'Student profile not found' });
+      }
+
+      console.log('Student enrollment:', {
+        class: student.class,
+        curricula: student.curricula,
+        subjects: student.subjects
+      });
+
+      // Build filter criteria based on student's enrollment
+      const filterCriteria = {
+        class: student.class
+      };
+
+      // If student has specific curricula enrolled, filter by those
+      if (student.curricula && student.curricula.length > 0) {
+        filterCriteria.curriculum = { $in: student.curricula };
+      }
+
+      // If student has specific subjects enrolled, filter by those
+      if (student.subjects && student.subjects.length > 0) {
+        filterCriteria.subject = { $in: student.subjects };
+      }
+
+      console.log('Filter criteria:', filterCriteria);
+
+      // Fetch notes that match the student's enrollment
+      const notes = await Notes.find(filterCriteria)
+        .populate('createdBy', 'name email')
+        .sort({ createdAt: -1 }); // Sort by newest first
+
+      console.log('Filtered notes count:', notes.length);
+
+      if (!notes || notes.length === 0) {
+        return res.status(200).json({ message: 'No notes found for your enrolled courses', data: [] });
+      }
+
+      res.json(notes);
+    } catch (error) {
+      console.error('Get student notes error:', error);
       res.status(500).json({ message: error.message });
     }
   },
