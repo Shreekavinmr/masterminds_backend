@@ -38,7 +38,7 @@ router.put('/students/:studentId', protect, admin, authController.updateStudent)
 router.delete('/students/:studentId', protect, admin, authController.deleteStudent);
 router.get('/students/:studentId', protect, admin, authController.getStudent);
 router.get('/students', protect, admin, authController.getAllStudents);
-router.get('/me', protect, authController.getMe);
+router.get('/getMe', protect, authController.getMe); // Changed from /me to /getMe
 router.post('/logout', authController.logout);
 
 module.exports = router;

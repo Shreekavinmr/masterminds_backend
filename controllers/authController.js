@@ -21,78 +21,73 @@ const transporter = nodemailer.createTransport({
 
 const authController = {
   login: async (req, res) => {
-    const { email, password } = req.body;
-    try {
-      if (!User || typeof User.findOne !== 'function') {
-        throw new Error('User model is not properly defined');
-      }
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-
-      const authPayload = {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-      };
-      const authToken = jwt.sign(authPayload, process.env.JWT_SECRET, {
-        expiresIn: '1h',
-      });
-      const metaPayload = {
-        name: user.name,
-        role: user.role,
-      };
-      const metaToken = jwt.sign(metaPayload, process.env.JWT_SECRET, {
-        expiresIn: '1h',
-      });
-
-      // Cookie configuration based on environment
-      const isProduction = process.env.NODE_ENV === 'production';
-
-      const cookieOptions = {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
-        maxAge: 60 * 60 * 1000,
-      };
-
-      const userMetaCookieOptions = {
-        httpOnly: false,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
-        maxAge: 60 * 60 * 1000,
-      };
-
-      // Do NOT set the domain attribute
-      // Remove: 
-      // if (isProduction) {
-      //   cookieOptions.domain = 'masterminds-backend.onrender.com';
-      //   userMetaCookieOptions.domain = 'masterminds-backend.onrender.com';
-      // }
-
-      console.log('Cookie options:', cookieOptions);
-      console.log('UserMeta cookie options:', userMetaCookieOptions);
-
-      res.cookie('token', authToken, cookieOptions);
-      res.cookie('userMeta', metaToken, userMetaCookieOptions);
-
-      res.json({
-        message: 'Login successful',
-        user: {
-          name: user.name,
-          role: user.role,
-        },
-      });
-    } catch (error) {
-      console.error('Login error:', error.stack);
-      res.status(500).json({ message: 'Server error', error: error.message });
+  const { email, password } = req.body;
+  try {
+    console.log('Login attempt for email:', email); // Debug log
+    if (!User || typeof User.findOne !== 'function') {
+      console.error('User model is not defined');
+      throw new Error('User model is not properly defined');
     }
-  },
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log('No user found for email:', email);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      console.log('Password mismatch for email:', email);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const authPayload = {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+    };
+    const authToken = jwt.sign(authPayload, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    // Cookie configuration based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 60 * 60 * 1000,
+    };
+
+    console.log('Setting token cookie with options:', cookieOptions);
+    res.cookie('token', authToken, cookieOptions);
+
+    // Return user data in response
+    console.log('Sending response for user:', { name: user.name, role: user.role });
+    res.json({
+      message: 'Login successful',
+      user: {
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error.stack);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+},
+
+  getMe: async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('name role');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ name: user.name, role: user.role });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({ message: error.message });
+  }
+},
 
   forgotPassword: async (req, res) => {
     const { email } = req.body;
