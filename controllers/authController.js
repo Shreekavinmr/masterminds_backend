@@ -21,52 +21,89 @@ const transporter = nodemailer.createTransport({
 
 const authController = {
   login: async (req, res) => {
-    const { email, password } = req.body;
-    try {
-      if (!User || typeof User.findOne !== 'function') {
-        throw new Error('User model is not properly defined');
-      }
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-      const authPayload = {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-      };
-      const authToken = jwt.sign(authPayload, process.env.JWT_SECRET, {
-        expiresIn: '1h',
-      });
-      const metaPayload = {
-        name: user.name,
-        role: user.role,
-      };
-      const metaToken = jwt.sign(metaPayload, process.env.JWT_SECRET, {
-        expiresIn: '1h',
-      });
-      res.cookie('token', authToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 60 * 60 * 1000,
-      });
-      res.cookie('userMeta', metaToken, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 60 * 60 * 1000,
-      });
-      res.json({ message: 'Login successful' });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ message: 'Server error', error: error.message });
+  const { email, password } = req.body;
+  try {
+    if (!User || typeof User.findOne !== 'function') {
+      throw new Error('User model is not properly defined');
     }
-  },
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    const authPayload = {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+    };
+    const authToken = jwt.sign(authPayload, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+    const metaPayload = {
+      name: user.name,
+      role: user.role,
+    };
+    const metaToken = jwt.sign(metaPayload, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    // DEBUG: Log environment and request details
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('Request origin:', req.headers.origin);
+    console.log('Request host:', req.headers.host);
+
+    // Cookie configuration based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 60 * 60 * 1000,
+    };
+
+    const userMetaCookieOptions = {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 60 * 60 * 1000,
+    };
+
+    // If different domains/subdomains, set domain (adjust as needed)
+    if (isProduction) {
+      // Option 1: If using subdomains (e.g., api.domain.com and app.domain.com)
+      // const domain = req.headers.host.split('.').slice(-2).join('.'); // Gets 'domain.com'
+      // cookieOptions.domain = `.${domain}`;
+      // userMetaCookieOptions.domain = `.${domain}`;
+      
+      // Option 2: Set specific domain (replace with your actual domain)
+      cookieOptions.domain = 'https://masterminds-backend.onrender.com';
+      userMetaCookieOptions.domain = 'https://masterminds-backend.onrender.com';
+    }
+
+    console.log('Cookie options:', cookieOptions);
+    console.log('UserMeta cookie options:', userMetaCookieOptions);
+
+    res.cookie('token', authToken, cookieOptions);
+    res.cookie('userMeta', metaToken, userMetaCookieOptions);
+    
+    // Also return user data in response as fallback
+    res.json({ 
+      message: 'Login successful',
+      user: {
+        name: user.name,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+},
 
   forgotPassword: async (req, res) => {
     const { email } = req.body;
