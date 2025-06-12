@@ -73,16 +73,9 @@ const authController = {
       maxAge: 60 * 60 * 1000,
     };
 
-    // If different domains/subdomains, set domain (adjust as needed)
     if (isProduction) {
-      // Option 1: If using subdomains (e.g., api.domain.com and app.domain.com)
-      // const domain = req.headers.host.split('.').slice(-2).join('.'); // Gets 'domain.com'
-      // cookieOptions.domain = `.${domain}`;
-      // userMetaCookieOptions.domain = `.${domain}`;
-      
-      // Option 2: Set specific domain (replace with your actual domain)
-      cookieOptions.domain = 'https://masterminds-backend.onrender.com';
-      userMetaCookieOptions.domain = 'https://masterminds-backend.onrender.com';
+      cookieOptions.domain = 'masterminds-backend.onrender.com';
+      userMetaCookieOptions.domain = 'masterminds-backend.onrender.com';
     }
 
     console.log('Cookie options:', cookieOptions);
