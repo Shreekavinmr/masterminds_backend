@@ -39,6 +39,10 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.post('/api/contact', sendContactEmail);
 app.post('/api/enroll', sendEnrollEmail);
 
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
@@ -49,4 +53,14 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  
+    const SERVER_URL = process.env.SERVER_URL;
+    
+    setInterval(() => {
+      fetch(`${SERVER_URL}/health`)
+        .then(() => console.log('Self-ping successful'))
+        .catch(err => console.log('Self-ping failed:', err.message));
+    }, 360000); 
+});
